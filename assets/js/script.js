@@ -32,6 +32,74 @@ if (storedCities) {
     console.log('no local data')
 }
 
+// ----------------
+function createChart(data) {
+    // get sunrise, sunset times from current, convert to hour
+    var sunrise_unix_0 = data.current['sunrise']
+    var sunset_unix_0 = data.current['sunset']
+    // convert unix to hour using /https://day.js.org/docs/en/display/format
+    var sunrise_hr_0 = Number(dayjs.unix(sunrise_unix_0).format("H"))
+    var sunset_hr_0 = Number(dayjs.unix(sunset_unix_0).format("H"))
+
+    // create arrays to fill with hourly parameters
+    var hourly_data = [] // all weather data
+    var hourly_sailing_rec_label = [] // x data (hours)
+    var hourly_sailing_rec_data = [] // y data (yes/no gauge)
+    var bubble = []
+
+    // loop through hourly data from sunrise to sunset
+    for (var i = sunrise_hr_0; i < sunset_hr_0; i++){
+        // get hourly data from object
+        var temp_0 = data.hourly[i].temp
+        var wind_0 = data.hourly[i].wind_speed
+        var wind_deg_0 = data.hourly[i].wind_deg
+        var wind_gust_0 = data.hourly[i].wind_gust
+        var clouds_0 = data.hourly[i].clouds
+        var sailing_rec_0 = 0;
+
+        if (temp_0 > 85 && temp_0 < 65) {
+            sailing_rec_0 = 1
+        } else if (wind_0 > 5 && wind_0 < 15) {
+            sailing_rec_0 = 1
+        } else if (clouds_0 < 75) {
+            sailing_rec_0 = 1
+        } 
+        
+        var weather = {"hour": i, "temp": temp_0, "wind_speed": wind_0 , "wind_deg": wind_deg_0 , "wind_gust": wind_gust_0, "clouds": clouds_0, "sailing_rec": sailing_rec_0}
+        hourly_data.push(weather)
+        hourly_sailing_rec_label.push(i)
+        hourly_sailing_rec_data.push(sailing_rec_0)
+
+        var xyr = {x: i, y: 1, r: sailing_rec_0*15}
+        bubble.push(xyr)
+
+
+    };
+    console.log(hourly_data)
+    console.log(hourly_sailing_rec_label)
+    console.log(hourly_sailing_rec_data)
+    console.log(bubble)
+    console.log(...bubble)
+
+
+    var ctx = document.getElementById('myChart');
+    var popData = {
+        datasets: [{
+          label: ['Best time for Sailing'],
+          data: bubble,
+          backgroundColor: "#FF9966"
+        }]
+      };
+      
+      var bubbleChart = new Chart(ctx, {
+        type: 'bubble',
+        data: popData
+      });
+
+
+    return hourly_sailing_rec_label, hourly_sailing_rec_data    
+}
+
 
 function get_weather(city) {
     // get city name from coordinates
@@ -52,7 +120,7 @@ function get_weather(city) {
             var lon = cityObj.lon 
             var state = cityObj.state
             var country = cityObj.country
-            var part = 'minutely,hourly,alerts'
+            var part = 'minutely,alerts'
             var units = 'imperial'
             var url_weather = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&exclude=${part}&units=${units}&appid=${api_key}`
             console.log("URL", url_weather)
@@ -63,6 +131,7 @@ function get_weather(city) {
             })
             .then(function(data) {
                 console.log(data);
+                var chart = createChart(data);
                 // pull current weather, add to html
                 var dt_unix_0 = data.current.dt
                 var dt_0 = dayjs.unix(dt_unix_0).format("MM-DD-YYYY")
